@@ -15,7 +15,7 @@
 :root{
   color-scheme:light;
   --bg:#EDF1EF; --surface:#FFFFFF; --surface2:#E3E9E6; --ink:#131C19; --ink2:#4B5B55; --line:#CBD5D0;
-  --c-work:#187A4E; --c-prep:#2A78A8; --c-log:#9A6200; --c-wait:#C7432B; --c-defect:#9B2A66; --c-misc:#6C4FB3; --c-break:#5F6C67; --c-area:#0E7C86; --c-search:#C25E14; --c-over:#7A5230;
+  --c-work:#187A4E; --c-prep:#2A78A8; --c-log:#9A6200; --c-wait:#C7432B; --c-defect:#9B2A66; --c-misc:#6C4FB3; --c-break:#5F6C67; --c-area:#0E7C86; --c-search:#C25E14; --c-over:#7A5230; --c-pack:#4E7D1E; --c-kit:#3D6FB0; --c-shelf:#8A6A12; --c-check:#4F6D7A;
   --shadow:0 1px 0 rgba(19,28,25,.05),0 8px 20px -14px rgba(19,28,25,.35);
   --font:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
   --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
@@ -185,14 +185,22 @@ h3 span{font-size:14px;font-weight:400;color:var(--ink2);margin-left:6px}
 .mini.pal b{font-size:16px}
 .chip.btn{cursor:pointer;font-family:inherit}
 .chip.btn:active{transform:scale(.97)}
-.stg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:2px}
-.stt{padding:14px 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);text-align:left}
-.stt b{display:block;font-size:20px;line-height:1.15}
+.stg{display:grid;grid-template-columns:1fr;gap:8px;margin-top:2px}
+.stt{position:relative;display:block;padding:12px 44px 12px 20px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface2);text-align:left;overflow:hidden}
+.stt::before{content:'';position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--sc)}
+.stt::after{content:'';position:absolute;right:14px;top:50%;width:20px;height:20px;margin-top:-11px;border-radius:50%;border:2px solid var(--line);box-sizing:border-box}
+.stt[aria-pressed="true"]::after{content:'✓';border-color:var(--bg);background:var(--bg);color:var(--ink);font-size:13px;font-weight:800;line-height:16px;text-align:center}
+.stt b{display:block;font-size:18px;line-height:1.15}
 .stt small{display:block;color:var(--ink2);font-size:13px;margin-top:2px}
 .stt[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .stt[aria-pressed="true"] small{color:var(--bg);opacity:.8}
 .bigbtn.off{opacity:.45}
 .tabs button{padding:10px 2px;font-size:14px;min-width:0}
+.toolc{padding:12px 14px}
+.toolhd{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;text-align:left}
+.toolhd b{display:block;font-size:15px}
+.toolhd small{display:block;color:var(--ink2);font-size:13px;margin-top:2px}
+.toolhd .lnk{margin-left:0;white-space:nowrap;font-size:13px;color:var(--ink2)}
 </style>
 </head>
 <body>
@@ -224,7 +232,7 @@ if(!S.known)S.known={};
 if(!S.dirty)S.dirty={};
 Object.keys(S.shifts).forEach(function(k){var x=S.shifts[k];if(!(x&&Array.isArray(x.ev)&&x.ev.length&&Array.isArray(x.sh))){delete S.shifts[k];delete S.dirty[k]}});
 if(!S.cfg)S.cfg=Object.assign({},CFG_DEF);
-if(S.st!=='cnc'&&S.st!=='kok')S.st='';
+if(S.st!=='cnc'&&S.st!=='kok'&&S.st!=='pak')S.st='';
 function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 function lg(){return S.lang==='ru'?'ru':'fi'}
 
@@ -273,7 +281,7 @@ var TR={
  op_l:['Оператор / сборщик (инициалы)','Käyttäjä / kasuri (nimikirjaimet)'],
  ord_l:['Заказ · Tilaus','Tilaus'],mat_l:['Материал · Materiaali','Materiaali'],
  start_b:['Начать смену','Aloita vuoro'],
- start_s:['Aloita vuoro · первое состояние: Подготовка','Ensimmäinen tila: Valmistelu'],
+ start_s:[function(n){return 'Aloita vuoro · первое состояние: '+n},function(n){return 'Ensimmäinen tila: '+n}],
  adopt_h:['Смена идёт на другом устройстве','Vuoro on käynnissä toisella laitteella'],
  adopt_p:[function(o,t,s){return o+' · '+s+' · с '+t+'. Можно продолжить её здесь.'},function(o,t,s){return o+' · '+s+' · alkanut klo '+t+'. Voit jatkaa sitä tällä laitteella.'}],
  adopt_b:['Открыть здесь','Avaa tässä'],
@@ -383,8 +391,13 @@ var TR={
  stale_bad:[function(h){return 'Раньше нельзя: последняя запись в '+h},function(h){return 'Ei voi aikaisemmin: viimeisin kirjaus klo '+h}],
  /* --- общее приложение: участки, вход, перенос --- */
  sy_auth:['нужен вход','kirjaudu'],
- stn_cnc:['ЧПУ','CNC'],stn_kok:['Сборка','Kokoonpano'],
- st_cnc_s:['Нестинг: раскрой плит','Nesting-leikkaus'],st_kok_s:['Сборка корпусов','Kaappien kokoonpano'],
+ stn_cnc:['ЧПУ','CNC'],stn_kok:['Сборка','Kokoonpano'],stn_pak:['Упаковка','Pakkaus'],
+ st_cnc_s:['Раскрой плит','Levyjen leikkaus'],st_kok_s:['Сборка корпусов','Runkojen kokoonpano'],st_pak_s:['Доводка и упаковка','Viimeistely ja pakkaus'],
+ st_sw_pick:['Текущая смена закончится, и сразу начнётся новая на выбранном участке. Оператор и заказ сохранятся.','Nykyinen vuoro päättyy ja uusi alkaa valitulla työpisteellä. Tekijä ja tilaus säilyvät.'],
+ pak_cabs_l:['Упаковано корпусов · Pakatut kaapit','Pakattuja kaappeja vuorossa'],pak_cab_b:['＋ Корпус упакован','＋ Kaappi pakattu'],pak_cab_s:['Kaappi pakattu',''],
+ misc_ph:['Что за работа? Коротко','Mitä työtä? Lyhyesti'],
+ tool_more:[function(n){return n+' фрез · подробнее'},function(n){return n+' terää · näytä'}],tool_less:['Свернуть','Piilota'],
+ tool_last:[function(tl,d){return 'Последняя замена: '+tl+', '+d},function(tl,d){return 'Viimeisin vaihto: '+tl+', '+d}],
  st_h:['Участок','Työpiste'],st_pick:['Выберите участок','Valitse työpiste'],
  st_sub:[function(s){return 'Участок: '+s},function(s){return 'Työpiste: '+s}],
  st_need:['Сначала выберите участок','Valitse ensin työpiste'],
@@ -550,15 +563,26 @@ var STATES_K=[
  {k:'break',ru:'Перерыв',fi:'Tauko',cls:'—',c:'--c-break',reasons:[
    ['coffee','Кофе-пауза (оплачивается)','Kahvitauko (maksettu)'],['lunch','Обед (не оплачивается)','Ruokatauko (maksamaton)']]}
 ];
+var STATES_P=[
+ {k:'work',ru:'Доводка',fi:'Viimeistely',cls:'VA',c:'--c-work',reasons:[]},
+ {k:'pack',ru:'Упаковка',fi:'Pakkaus',cls:'VA',c:'--c-pack',reasons:[]},
+ {k:'kit',ru:'Комплектование',fi:'Komplektointi',cls:'NVA',c:'--c-kit',reasons:[],hint:['поиск и сбор комплектующих','osien haku ja keräys']},
+ {k:'shelf',ru:'Раскладка поставки',fi:'Hyllytys',cls:'NVA',c:'--c-shelf',reasons:[]},
+ {k:'check',ru:'Проверка целостности',fi:'Eheyden tarkistus',cls:'NVA',c:'--c-check',reasons:[]},
+ {k:'misc',ru:'Другая работа',fi:'Muu työ',cls:'NVA',c:'--c-misc',reasons:[],noteOnly:true},
+ {k:'break',ru:'Перерыв',fi:'Tauko',cls:'—',c:'--c-break',reasons:[
+   ['coffee','Кофе-пауза (оплачивается)','Kahvitauko (maksettu)'],['lunch','Обед (не оплачивается)','Ruokatauko (maksamaton)']]}
+];
 /* ---------- участки: у каждого свой набор состояний и причин ---------- */
-var STN=['cnc','kok'];
-var SETS={cnc:{states:STATES_C},kok:{states:STATES_K}};
+var STN=['cnc','kok','pak'];
+var SETS={cnc:{states:STATES_C,first:'prep'},kok:{states:STATES_K,first:'prep'},pak:{states:STATES_P,first:'kit'}};
+function normSt(st){return SETS[st]?st:'cnc'}
 STN.forEach(function(k){SETS[k].map={};SETS[k].states.forEach(function(s){SETS[k].map[s.k]=s})});
-var CLS={work:'VA',log:'NVA',prep:'NVA',misc:'NVA',defect:'Hukka',wait:'Hukka',search:'Hukka',over:'Hukka',area:'—',break:'—'};
+var CLS={work:'VA',pack:'VA',log:'NVA',prep:'NVA',misc:'NVA',kit:'NVA',shelf:'NVA',check:'NVA',defect:'Hukka',wait:'Hukka',search:'Hukka',over:'Hukka',area:'—',break:'—'};
 var CS='cnc',STATES=SETS.cnc.states,SMAP=SETS.cnc.map;
 function useSt(st){CS=SETS[st]?st:'cnc';STATES=SETS[CS].states;SMAP=SETS[CS].map}
-function shSt(sh){return sh&&(sh.st==='kok'||(!sh.st&&Array.isArray(sh.pl)))?'kok':'cnc'}
-function smOf(st,k){return(SETS[st]||SETS.cnc).map[k]||SETS.cnc.map[k]||SETS.kok.map[k]}
+function shSt(sh){if(!sh)return 'cnc';if(SETS[sh.st])return sh.st;return (!sh.st&&Array.isArray(sh.pl))?'kok':'cnc'}
+function smOf(st,k){return(SETS[st]||SETS.cnc).map[k]||SETS.cnc.map[k]||SETS.kok.map[k]||SETS.pak.map[k]}
 function stShort(st){return TR['stn_'+st][lg()==='ru'?0:1]}
 function stSub(st){return TR['st_'+st+'_s'][lg()==='ru'?0:1]}
 function curSt(){var a=active();return a?shSt(a):(S.st||'cnc')}
@@ -827,15 +851,15 @@ function feedback(){try{navigator.vibrate&&navigator.vibrate(15)}catch(e){}}
 function snapshot(){var sh=active();UNDO=sh?JSON.stringify(sh):null}
 function toast(text,undo){UI.toast={text:text,undo:!!undo};renderToast();clearTimeout(toast.t);toast.t=setTimeout(function(){UI.toast=null;renderToast()},6000)}
 function startShift(op,ord,mat,oid,st){
-  var t0=Date.now();st=st==='kok'?'kok':'cnc';
-  var ev0={t:t0,s:'prep',r:null,o:ord||'',oid:oid||''};if(st==='cnc')ev0.m=mat||'';
+  var t0=Date.now();st=normSt(st);
+  var ev0={t:t0,s:SETS[st].first,r:null,o:ord||'',oid:oid||''};if(st==='cnc')ev0.m=mat||'';
   var sh={id:'sh_'+t0.toString(36),date:ymd(t0),op:op||'—',st:st,start:t0,end:null,ev:[ev0],sh:[],upd:t0};
-  if(st==='kok')sh.pl=[];
+  if(st!=='cnc')sh.pl=[];
   S.shifts[sh.id]=sh;S.activeId=sh.id;S.op=op;S.ord=ord;S.mat=mat;S.oid=oid||'';S.st=st;UI.viewId=null;UI.tab='shift';UNDO=null;useSt(st);touch(sh);
 }
 /* перейти на другой участок: текущая смена закрывается, сразу открывается новая (оператор и заказ те же) */
 function switchStation(to){
-  to=to==='kok'?'kok':'cnc';var sh=active();
+  to=normSt(to);var sh=active();
   if(!sh){S.st=to;save();render();return}
   if(shSt(sh)===to)return;
   var op=sh.op==='—'?'':sh.op,c0=last(sh);
@@ -1008,7 +1032,14 @@ function makeSampleK(){
   });
   return {id:'sample',sample:true,st:'kok',date:ymd(start),op:'',start:start,end:t0,ev:ev,sh:cabs,upd:0};
 }
-function getSample(st){st=st==='kok'?'kok':'cnc';return SAMPLES[st]||(SAMPLES[st]=makeSample(st))}
+function makeSampleP(){
+  var d=new Date();d.setHours(8,0,0,0);var t0=d.getTime(),start=t0,ev=[],cabs=[],pl=[];
+  var plan=[['kit',12],['work',25],['check',8],['pack',15],['work',22],['pack',14],['break',15],['shelf',30],['work',20],['pack',16],['break',30],['kit',10],['work',28],['pack',15],['misc',10]];
+  plan.forEach(function(p){ev.push({t:t0,s:p[0],r:p[0]==='break'?'coffee':null,o:'Esimerkki',oid:''});t0+=p[1]*60000;if(p[0]==='pack')cabs.push({t:t0-30000,o:'Esimerkki',oid:''})});
+  pl.push({t:t0-60000,o:'Esimerkki',oid:''});
+  return {id:'sample',sample:true,st:'pak',date:ymd(start),op:'',start:start,end:t0,ev:ev,sh:cabs,pl:pl,upd:0};
+}
+function getSample(st){st=normSt(st);return SAMPLES[st]||(SAMPLES[st]=(st==='pak'?makeSampleP():makeSample(st)))}
 /* дубли (смена записана дважды — вручную и в приложении) помечаются dup:true в базе и не участвуют ни в одном расчёте */
 function realShifts(){return Object.keys(S.shifts).map(function(k){return S.shifts[k]}).filter(function(s){return okShift(s)&&!s.dup}).sort(function(a,b){return b.start-a.start})}
 function cncShifts(){return realShifts().filter(function(s){return shSt(s)==='cnc'})}
@@ -1031,6 +1062,8 @@ function toolScope(tl,m){
   var w=0;matRules(m).forEach(function(r){var tt=r.tools||[];if(tt.indexOf(tl)>=0)w=Math.max(w,r.split?1/tt.length:1)});
   return w;
 }
+/* в карточке — только первые две группы материалов, полный список в подсказке не нужен */
+function toolScopeShort(tl){var l=toolScopeLabel(tl).split(', ');return l.length>2?l.slice(0,2).join(', ')+' …':l.join(', ')}
 function toolScopeLabel(tl){
   if(!toolHasRules(tl))return t('tool_noncomp');
   return toolRules().filter(function(r){return(r.tools||[]).indexOf(tl)>=0}).map(function(r){return lg()==='ru'?r.ru:(r.fi||r.ru)}).join(', ');
@@ -1080,11 +1113,13 @@ function toolUnmatchedHtml(){
 }
 function toolCardHtml(){
   var st=toolStats();if(!st.length)return'';
-  return'<section class="card"><h4>'+bi('tool_ctr_h')+'</h4>'
+  var x0=st[0];
+  if(!S.toolsOpen)return'<section class="card toolc"><button class="toolhd" data-act="tooltg" aria-expanded="false"><span><b>'+t('tool_ctr_h')+'</b><small>'+esc(t('tool_last',x0.tl,dlabel(x0.since)))+'</small></span><span class="lnk">'+t('tool_more',st.length)+' ▾</span></button></section>';
+  return'<section class="card toolc"><button class="toolhd" data-act="tooltg" aria-expanded="true" style="margin-bottom:12px"><span><b>'+bi('tool_ctr_h')+'</b></span><span class="lnk">'+t('tool_less')+' ▴</span></button>'
    +st.map(function(x){
      var life=function(l){var sh=Math.round(l.sheets*10)/10;return dur(l.cut)+' · '+(lg()==='ru'?String(sh).replace('.',','):sh)+' '+t('sheets_w')};
      return'<div style="margin-bottom:12px"><div class="rowh"><b>'+esc(x.tl)+'</b><span class="mono">'+life(x.cur)+'</span></div>'
-      +'<div class="muted" style="font-size:13px">'+t('tool_since',esc(dlabel(x.since)+' '+hm(x.since)))+' · '+esc(toolScopeLabel(x.tl))+(x.sid&&S.shifts[x.sid]?' · <button class="lnk" data-act="toolundoask" data-tl="'+esc(x.tl)+'" data-id="'+esc(x.sid+'|'+x.since)+'">'+t('tool_undo')+'</button>':'')+'</div>'
+      +'<div class="muted" style="font-size:13px">'+t('tool_since',esc(dlabel(x.since)+' '+hm(x.since)))+' · '+esc(toolScopeShort(x.tl))+(x.sid&&S.shifts[x.sid]?' · <button class="lnk" data-act="toolundoask" data-tl="'+esc(x.tl)+'" data-id="'+esc(x.sid+'|'+x.since)+'">'+t('tool_undo')+'</button>':'')+'</div>'
       +(x.prev?'<div class="muted" style="font-size:13px">'+t('tool_prev',esc(dlabel(x.prevFrom)),life(x.prev))+'</div>':'')+'</div>';
    }).join('')+toolUnmatchedHtml()+'<p class="muted" style="margin:0;font-size:13px">'+t('tool_note')+'</p></section>';
 }
@@ -1204,7 +1239,7 @@ async function exportCsv(kind){
     fn='vuoro_laskurit';
     rows=[['shift_id','date','station','operator','type','time','order','material','seconds_since_prev','auto']];
     list.forEach(function(sh){
-      var prev=null,k=shSt(sh)==='kok'?'kaappi':'levy';
+      var prev=null,k=shSt(sh)==='cnc'?'levy':'kaappi';
       sh.sh.slice().sort(function(a,b){return a.t-b.t}).forEach(function(x){rows.push([sh.id,sh.date,shSt(sh),sh.op,k,iso(x.t),x.o||'',x.m||'',prev?Math.round((x.t-prev)/1000):'',x.a?1:'']);prev=x.t});
       var pp=null;(sh.pl||[]).slice().sort(function(a,b){return a.t-b.t}).forEach(function(x){rows.push([sh.id,sh.date,shSt(sh),sh.op,'lava',iso(x.t),x.o||'','',pp?Math.round((x.t-pp)/1000):'','']);pp=x.t});
     });
@@ -1227,8 +1262,9 @@ function tabsBar(){
   var tb=[['shift','tab_shift'],['ord','tab_ord'],['sum','tab_sum'],['trend','tab_trend'],['hist','tab_hist']];
   return '<nav class="tabs"><div class="tabs-in">'+tb.map(function(x){var s2=t2(x[1]);return '<button data-act="tab" data-t="'+x[0]+'"'+(UI.tab===x[0]?' aria-current="page"':'')+'>'+t(x[1])+(s2?'<small>'+s2+'</small>':'')+'</button>'}).join('')+'</div></nav>';
 }
+var STC={cnc:'--c-prep',kok:'--c-work',pak:'--c-pack'};
 function stTiles(sel){
-  return '<div class="stg">'+STN.map(function(k){return '<button class="stt" data-act="stpick" data-s="'+k+'" aria-pressed="'+(sel===k)+'"><b>'+esc(stShort(k))+'</b><small>'+esc(stSub(k))+'</small></button>'}).join('')+'</div>';
+  return '<div class="stg">'+STN.map(function(k){return '<button class="stt" style="--sc:var('+STC[k]+')" data-act="stpick" data-s="'+k+'" aria-pressed="'+(sel===k)+'"><b>'+esc(stShort(k))+'</b><small>'+esc(stSub(k))+'</small></button>'}).join('')+'</div>';
 }
 function startCard(){
   var mine=(S.op||'').trim().toLowerCase();
@@ -1240,13 +1276,14 @@ function startCard(){
    +'<div class="field"><label>'+bi('st_h')+'</label>'+stTiles(S.st)+'</div>'
    +'<div class="field"><label for="st-op">'+t('op_l')+'</label><input id="st-op" value="'+esc(S.op)+'" autocomplete="off" maxlength="12"'+(UI.user&&!UI.user.admin?' readonly aria-describedby="op-lock"':'')+'>'+(UI.user&&!UI.user.admin?'<small id="op-lock" class="muted">'+t('pp_op_locked')+'</small>':'')+'</div>'
    +'<div class="ctx" style="grid-template-columns:1fr auto;margin-top:10px;align-items:center">'+ordSub+'<button class="mini" data-act="ordpick" style="width:auto;padding:8px 14px">'+t('ord_change')+'</button></div>'
-   +'<div style="height:14px"></div><button class="bigbtn'+(S.st?'':' off')+'" data-act="start">'+t('start_b')+'<small>'+t('start_s')+'</small></button></section>'+adopt;
+   +'<div style="height:14px"></div><button class="bigbtn'+(S.st?'':' off')+'" data-act="start">'+t('start_b')+'<small>'+(S.st?t('start_s',sn(SETS[S.st].map[SETS[S.st].first])):'')+'</small></button></section>'+adopt;
 }
 function counterHtml(sh){
   var n=sh.sh.length;
-  if(shSt(sh)==='kok'){
-    return '<section class="sheets"><div class="line"><span>'+t('cabs_l')+'<br><span id="ago">'+esc(agoText(sh))+'</span></span><b>'+n+'</b></div>'
-     +'<div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:stretch"><button class="bigbtn" data-act="cab">'+t('cab_b')+(t('cab_s')?'<small>'+t('cab_s')+'</small>':'')+'</button><button class="mini pal" data-act="pal">'+t('pal_b')+(t2('pal_s')?'<small>'+t2('pal_s')+'</small>':'')+'<b class="mono">'+npl(sh)+'</b></button><button class="mini" data-act="unsheet" aria-label="'+t('uncab')+'"'+(n?'':' disabled')+'>−1</button></div></section>';
+  var stc=shSt(sh),pk=stc==='pak';
+  if(stc!=='cnc'){
+    return '<section class="sheets"><div class="line"><span>'+t(pk?'pak_cabs_l':'cabs_l')+'<br><span id="ago">'+esc(agoText(sh))+'</span></span><b>'+n+'</b></div>'
+     +'<div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:stretch"><button class="bigbtn" data-act="cab">'+t(pk?'pak_cab_b':'cab_b')+(t(pk?'pak_cab_s':'cab_s')?'<small>'+t(pk?'pak_cab_s':'cab_s')+'</small>':'')+'</button><button class="mini pal" data-act="pal">'+t('pal_b')+(t2('pal_s')?'<small>'+t2('pal_s')+'</small>':'')+'<b class="mono">'+npl(sh)+'</b></button><button class="mini" data-act="unsheet" aria-label="'+t('uncab')+'"'+(n?'':' disabled')+'>−1</button></div></section>';
   }
   var sheetSub=t('sheet_s');
   return '<section class="sheets"><div class="line"><span>'+t('sheets_l')+'<br><span id="ago">'+esc(agoText(sh))+'</span></span><b>'+n+'</b></div>'
@@ -1301,7 +1338,7 @@ function viewSum(){
    +'<div class="axis"><span>'+hm(sh.start)+'</span><span>'+hm(end)+'</span></div><ul class="leg">'
    +STATES.filter(function(s){return m.byState[s.k]}).map(function(s){var f=ss(s);return '<li style="--c:var('+s.c+')"><span class="sw"></span><span>'+sn(s)+(f?' <span class="muted">'+f+'</span>':'')+'</span><span class="t">'+dur(m.byState[s.k])+'</span><span class="p">'+((s.k==='break'||s.k==='area')?'':pct(m.byState[s.k],m.tracked))+'</span></li>'}).join('')+'</ul></section>';
   var cnt;
-  if(st0==='kok'){
+  if(st0!=='cnc'){
     cnt='<section class="card"><h4>'+bi('cabs_h')+'</h4><div class="rowh"><span><b class="mono" style="font-size:28px">'+m.n+'</b> <span class="muted">'+t('cabs_w')+'</span></span><span class="muted">'+(m.n>1?t('avg_l',dur(m.avg)):'—')+'</span></div>'
      +'<p class="muted" style="margin:10px 0 0">'+t('pal_l',npl(sh))+'</p><p class="muted" style="margin:6px 0 0">'+t('sw_l',m.sw)+'</p></section>';
   }else{
@@ -1314,7 +1351,7 @@ function viewSum(){
   return head+kp+strip+paretoHtml(m.par,false)+(st0==='kok'?srcHtml(m.bySrc):'')+cnt+nc+del;
 }
 /* ---------- фильтры списков: участок и исполнитель ---------- */
-function fSt(){var f=S.stf;return(f==='cnc'||f==='kok'||f==='all')?f:(S.st||'all')}
+function fSt(){var f=S.stf;return(SETS[f]||f==='all')?f:(S.st||'all')}
 function stShifts(){var f=fSt();return realShifts().filter(function(s){return f==='all'||shSt(s)===f})}
 function opKey(o){return String(o||'').trim().toUpperCase()}
 function opList(){var seen={},out=[];stShifts().forEach(function(s){var k=opKey(s.op);if(k&&k!=='—'&&!seen[k]){seen[k]=1;out.push(k)}});return out.sort()}
@@ -1322,11 +1359,11 @@ function opFilter(){var f=S.opf;return(f&&opList().indexOf(f)>=0)?f:''}
 function fShifts(){var l=stShifts(),f=opFilter();return f?l.filter(function(s){return opKey(s.op)===f}):l}
 function fltHtml(){
   var ops=opList(),f=fSt();
-  var row1='<div class="chips" style="margin-top:0">'+[['all',t('f_all')],['cnc',stShort('cnc')],['kok',stShort('kok')]].map(function(x){return '<button data-act="stf" data-s="'+x[0]+'" aria-pressed="'+(f===x[0])+'">'+esc(x[1])+'</button>'}).join('')+'</div>';
+  var row1='<div class="chips" style="margin-top:0">'+[['all',t('f_all')]].concat(STN.map(function(k){return [k,stShort(k)]})).map(function(x){return '<button data-act="stf" data-s="'+x[0]+'" aria-pressed="'+(f===x[0])+'">'+esc(x[1])+'</button>'}).join('')+'</div>';
   var row2=ops.length?'<h4 style="margin:14px 0 8px">'+t('flt_h')+'</h4><div class="chips" style="margin-top:0">'+[''].concat(ops).map(function(o){return '<button data-act="opf" data-o="'+esc(o)+'" aria-pressed="'+(opFilter()===o)+'">'+(o?esc(o):t('flt_all'))+'</button>'}).join('')+'</div>':'';
   return '<section class="card"><h4>'+t('st_h')+'</h4>'+row1+row2+'</section>';
 }
-function nUnits(sh,n){return shSt(sh)==='kok'?t('n_cabs',n):t('n_sheets',n)}
+function nUnits(sh,n){return shSt(sh)!=='cnc'?t('n_cabs',n):t('n_sheets',n)}
 function peopleCard(){
   if(!(UI.ed&&UI.fb))return '';
   var L=UI.people;
@@ -1335,7 +1372,7 @@ function peopleCard(){
 }
 function viewHist(){
   var list=fShifts(),now=Date.now();
-  var smp=list.length?null:getSample(fSt()==='kok'?'kok':'cnc');
+  var smp=list.length?null:getSample(fSt()==='all'?'cnc':fSt());
   var rows=(list.length?list:[smp]).map(function(sh){
     var m=summary(sh,now);
     return '<button class="row" data-act="open" data-id="'+sh.id+'"'+(sh.sample?' data-st="'+shSt(sh)+'"':'')+'><span class="a">'+esc(dlabel(sh.start))+(sh.sample?t('sample_tag'):sh.hist?t('hist_tag'):'')+'</span><span class="b">'+hm(sh.start)+'–'+(sh.end?hm(sh.end):t('chip_live'))+'</span><span class="c">'+esc(stShort(shSt(sh)))+' · '+esc(opName(sh))+' · '+nUnits(sh,m.n)+(npl(sh)?' · '+t('n_pal',npl(sh)):'')+'</span><span class="d">VA '+pct(m.cls.VA,m.tracked)+'</span></button>';
@@ -1373,7 +1410,7 @@ function taktHtml(){
    +act+(UI.ed?'':'<p class="muted" style="margin:10px 0 0;font-size:13px">'+t('ro_note')+'</p>')+'<p class="muted" style="margin:10px 0 0;font-size:13px">'+t('takt_note')+'</p></section>';
 }
 function viewTrend(){
-  var now=Date.now(),list=fShifts(),f=fSt();useSt(f==='kok'?'kok':'cnc');
+  var now=Date.now(),list=fShifts(),f=fSt();useSt(f==='all'?'cnc':f);
   if(!list.length)return fltHtml()+(f==='kok'?taktHtml():'')+'<section class="card"><p class="muted" style="margin:0">'+t('trend_none')+'</p></section>';
   var m=summaryAll(list,now);
   var first=list[list.length-1],last0=list[0];
@@ -1389,9 +1426,9 @@ function viewTrend(){
    +[['VA',m.cls.VA],['NVA',m.cls.NVA],['Hukka',m.cls.Hukka]].map(function(x){return'<div class="kpi"><span class="kl">'+x[0]+'</span><b>'+pct(x[1],m.tracked)+'</b><small>'+dur(x[1])+'</small></div>'}).join('')+'</div>'
    +(vas.length>1?'<p class="muted" style="margin:10px 0 0">'+t('trend_span',Math.round(vmin*100),Math.round(vmax*100))+'</p>':'')+'</section>';
   var daysc='<section class="card"><h4>'+t('trend_days_h')+'</h4><div class="list">'+m.days.slice().reverse().map(function(d){
-    return'<button class="row" data-act="open" data-id="'+d.id+'"><span class="a">'+esc(dlabel(d.start))+(d.open?' · '+t('chip_live'):'')+'</span><span class="b">'+(d.va!=null?Math.round(d.va*100)+'%':'—')+'</span><span class="c">'+esc(stShort(d.st))+' · '+(d.st==='kok'?t('n_cabs',d.n):t('n_sheets',d.n))+'</span></button>';
+    return'<button class="row" data-act="open" data-id="'+d.id+'"><span class="a">'+esc(dlabel(d.start))+(d.open?' · '+t('chip_live'):'')+'</span><span class="b">'+(d.va!=null?Math.round(d.va*100)+'%':'—')+'</span><span class="c">'+esc(stShort(d.st))+' · '+(d.st!=='cnc'?t('n_cabs',d.n):t('n_sheets',d.n))+'</span></button>';
   }).join('')+'</div></section>';
-  var srcc=(f==='cnc')?'':srcHtml(m.bySrc);
+  var srcc=(f==='kok'||f==='all')?srcHtml(m.bySrc):'';
   return fltHtml()+head+(f==='kok'?taktHtml():'')+wkchart+kp+paretoHtml(m.par,f==='all')+srcc+daysc;
 }
 function orderRow(o){
@@ -1435,7 +1472,8 @@ function wklabel(ts){return new Date(ts).toLocaleDateString(lg()==='ru'?'ru-RU':
 function summaryByWeek(list,now,weeks){
   weeks=weeks||13;
   var curW=weekStart(now),buckets=[],byWk={};
-  for(var i=weeks-1;i>=0;i--){var b={wk:curW-i*7*86400000,cls:{VA:0,NVA:0,Hukka:0},n:0};buckets.push(b);byWk[b.wk]=b}
+  /* недели считаем по календарю, а не по 7×24 ч: при переходе на зимнее/летнее время сутки бывают 23 или 25 ч */
+  for(var i=weeks-1;i>=0;i--){var dw=new Date(curW);dw.setDate(dw.getDate()-7*i);var b={wk:weekStart(dw.getTime()),cls:{VA:0,NVA:0,Hukka:0},n:0};buckets.push(b);byWk[b.wk]=b}
   list.forEach(function(sh){
     var b=byWk[weekStart(sh.start)];if(!b)return;
     var m=summary(sh,now);
@@ -1485,12 +1523,17 @@ function renderModal(){
     var st=SMAP[m.k],cur=active()?last(active()):null,curR=cur&&cur.s===m.k?cur.r:null,s2=ss(st),withSrc=(CS==='kok'&&(st.k==='defect'||st.k==='over'));
     function sm(x){return x?'<small>'+x+'</small>':''}
     var srcRow=withSrc?'<p class="q" style="margin-top:2px">'+t('src_q')+'</p><div class="chips" style="margin:4px 0 10px">'+['cnc','edge','design','kit','asm'].map(function(k){return '<button data-act="srcsel" data-s="'+k+'" aria-pressed="'+(m.src===k)+'">'+esc(srcName(k))+'</button>'}).join('')+'</div>':'';
+    if(st.noteOnly){inner='<h3>'+sn(st)+(s2?'<span>'+s2+'</span>':'')+'</h3><div class="noterow"><input id="in-note2" value="'+esc(m.nt||'')+'" placeholder="'+esc(t('misc_ph'))+'" maxlength="120" autocomplete="off"><button class="bigbtn" data-act="reason" data-k="'+st.k+'" data-r="">'+t('save_b')+'</button></div><div class="two" style="grid-template-columns:1fr"><button data-act="close">'+t('cancel')+'</button></div>';el.innerHTML='<div class="ov" data-act="ovclose"><div class="md" role="dialog" aria-modal="true">'+inner+'</div></div>';setTimeout(function(){var i=$('#in-note2');if(i)i.focus()},30);return}
     inner='<h3>'+sn(st)+(s2?'<span>'+s2+'</span>':'')+'</h3><p class="q">'+t('what')+'</p>'
      +((st.k==='defect'||st.k==='over'||st.k==='misc'||st.k==='area')?'<div class="noterow" style="grid-template-columns:1fr;margin:0 0 4px"><input id="in-note2" value="'+esc(m.nt||'')+'" placeholder="'+esc(t((st.k==='defect'||st.k==='over')?'note_def_ph':'note_opt'))+'" maxlength="120" autocomplete="off"></div>':'')
      +srcRow+st.reasons.map(function(r){return '<button class="rb" data-act="reason" data-k="'+st.k+'" data-r="'+r[0]+'" aria-pressed="'+(curR===r[0])+'">'+rlab(r)+sm(rsub(r))+'</button>'}).join('')
      +(m.other?'<div class="noterow"><input id="in-note" placeholder="'+esc(t('note_ph'))+'" maxlength="80" autocomplete="off"><button class="bigbtn" data-act="note" data-k="'+st.k+'">'+t('save_b')+'</button></div>'
        :'<button class="rb" data-act="other" data-k="'+st.k+'">'+t('other')+sm(t2('other_s')||(lg()==='ru'?TR.other_s[0]:''))+'</button>')
      +(st.k==='prep'&&CS==='kok'?'':'<button class="rb ghost" data-act="reason" data-k="'+st.k+'" data-r="">'+t('none')+sm(lg()==='ru'?TR.none_s[0]:'')+'</button>');
+  }else if(m.type==='stsw'){
+    var cs1=curSt();
+    inner='<h3>'+t('st_sw_q')+'</h3><p class="q">'+t('st_sw_pick')+'</p>'+STN.filter(function(k){return k!==cs1}).map(function(k){return '<button class="rb" data-act="stsw-do" data-id="'+k+'">'+esc(stShort(k))+'<small>'+esc(stSub(k))+'</small></button>'}).join('')
+     +'<div class="two" style="grid-template-columns:1fr;margin-top:10px"><button data-act="close">'+t('cancel')+'</button></div>';
   }else if(m.type==='baseq'){
     var bq=UI.draft&&UI.draft.mats[m.i];
     inner='<h3>'+t('base_h')+'</h3><p class="q">'+esc(bq?bq.m:'')+'</p>'
@@ -1574,12 +1617,13 @@ document.addEventListener('click',function(e){
   switch(a){
     case 'lang':S.lang=b.dataset.l==='ru'?'ru':'fi';save();UI.modal=null;render();break;
     case 'tab':UI.tab=b.dataset.t;if(b.dataset.t==='shift')UI.viewId=null;render();window.scrollTo(0,0);break;
-    case 'stpick':var sti=$('#st-op');if(sti)S.op=(sti.value||'').trim();S.st=b.dataset.s==='kok'?'kok':'cnc';save();render();break;
+    case 'stpick':var sti=$('#st-op');if(sti)S.op=(sti.value||'').trim();S.st=normSt(b.dataset.s);save();render();break;
     case 'start':var soi=$('#st-op');S.op=soi?(soi.value||'').trim():S.op;
       if(!S.st){toast(t('st_need'));break}
       startShift(S.op,S.ord,S.st==='cnc'?S.mat:'',S.oid,S.st);render();break;
     case 'adopt':S.activeId=b.dataset.id;if(S.shifts[b.dataset.id]){S.st=shSt(S.shifts[b.dataset.id]);if(!(S.op||'').trim())S.op=S.shifts[b.dataset.id].op||''}save();render();break;
-    case 'state':if(b.dataset.k==='work'){if(last(active()).s==='work'){toast(t('already'))}else setState('work',last(active()).s==='defect'?'rw':null)}else{UI.modal={type:'reason',k:b.dataset.k};renderModal()}break;
+    case 'state':var skk=b.dataset.k,sdef=SMAP[skk];if(skk!=='work'&&sdef&&!sdef.reasons.length&&!sdef.noteOnly){if(last(active()).s===skk){toast(t('already'))}else setState(skk,null);break}
+      if(b.dataset.k==='work'){if(last(active()).s==='work'){toast(t('already'))}else setState('work',last(active()).s==='defect'?'rw':null)}else{UI.modal={type:'reason',k:b.dataset.k};renderModal()}break;
     case 'reason':var ni=$('#in-note2'),nv=ni?(ni.value||'').trim():'',rs=UI.modal&&UI.modal.src;
       if(CS==='cnc'&&b.dataset.k==='prep'&&b.dataset.r==='tool'){UI.modal={type:'toolpick'};renderModal();break}
       UI.modal=null;setState(b.dataset.k,b.dataset.r||null,nv,'',rs);break;
@@ -1615,8 +1659,9 @@ document.addEventListener('click',function(e){
     case 'exp':exportCsv(b.dataset.k);break;
     case 'undo':undo();break;
     case 'stf':S.stf=b.dataset.s;save();render();break;
+    case 'tooltg':S.toolsOpen=!S.toolsOpen;save();render();break;
     case 'opf':S.opf=b.dataset.o||'';save();render();break;
-    case 'stsw':var cs0=curSt(),to0=cs0==='cnc'?'kok':'cnc';UI.modal={type:'confirm',title:t('st_sw_q'),text:t('st_sw_t',stShort(cs0),stShort(to0)),ok:t('st_sw_ok'),act:'stsw-do',id:to0};renderModal();break;
+    case 'stsw':UI.modal={type:'stsw'};renderModal();break;
     case 'stsw-do':switchStation(b.dataset.id);break;
     case 'login':UI.modal={type:'login',mode:'ini'};renderModal();break;
     case 'logmode':UI.modal={type:'login',mode:b.dataset.m};renderModal();break;
